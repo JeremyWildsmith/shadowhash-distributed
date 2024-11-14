@@ -1,0 +1,48 @@
+@startuml
+actor User
+participant Cli
+participant Scheduler
+collections WorkPool
+
+collections Worker
+database JobBank
+
+User -> Cli : submit
+
+
+activate Cli
+
+Cli -> Cli : parse_shadow
+Cli -> JobBank : create_job
+
+Cli -> User : ok
+deactivate Cli
+
+Scheduler -> JobBank : get_job
+
+activate Scheduler
+JobBank -> Scheduler : job
+
+Scheduler -> Scheduler : spawn_workpool(job)
+deactivate Scheduler
+
+Worker -> Scheduler : enlist
+activate Scheduler
+activate Worker
+Scheduler -> Worker : workpool
+deactivate Worker
+deactivate Scheduler
+
+Worker -> WorkPool : ready
+activate WorkPool
+activate Worker
+WorkPool -> Worker : work_unit
+deactivate WorkPool
+Worker -> Worker : hashing
+Worker -> WorkPool : ready
+deactivate Worker
+
+...
+...
+WorkPool -> JobBank : commit
+@enduml

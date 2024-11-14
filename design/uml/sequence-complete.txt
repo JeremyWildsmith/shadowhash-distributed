@@ -1,0 +1,24 @@
+@startuml
+actor User
+participant Cli
+participant Scheduler
+collections WorkPool
+
+collections Worker
+database JobBank
+database ResultBank
+
+Worker -> WorkPool : found
+activate WorkPool
+WorkPool -> ResultBank : commit
+ResultBank -> WorkPool : ok
+WorkPool -> JobBank : delete(job_id)
+JobBank -> WorkPool : ok
+WorkPool -> Scheduler : suspend(job_id)
+deactivate WorkPool
+
+Scheduler -> WorkPool : shutdown
+WorkPool -> WorkPool : shutdown
+...
+
+@enduml

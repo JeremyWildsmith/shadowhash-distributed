@@ -1,0 +1,45 @@
+@startuml
+actor User
+participant Cli
+participant Scheduler
+collections WorkPool
+
+collections Worker
+database JobBank
+
+User -> Cli : suspend(job_id)
+
+
+activate Cli
+Cli -> JobBank : disable(job_id)
+JobBank -> Cli : ok
+Cli -> Scheduler : suspend(job_id)
+deactivate Cli
+activate Scheduler
+
+Scheduler -> WorkPool : shutdown
+
+deactivate Scheduler
+WorkPool -> JobBank : commit
+activate WorkPool
+WorkPool -> WorkPool : shutdown
+deactivate WorkPool
+
+...
+...
+
+User -> Cli : resume(job_id)
+activate Cli
+Cli -> JobBank : enable(job_id)
+JobBank -> Cli : ok
+deactivate Cli
+...
+
+Scheduler -> JobBank : get_job
+
+activate Scheduler
+JobBank -> Scheduler : job
+deactivate Scheduler
+...
+
+@enduml
