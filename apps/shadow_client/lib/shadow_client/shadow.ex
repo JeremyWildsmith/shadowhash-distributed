@@ -31,13 +31,14 @@ defmodule ShadowClient.Shadow do
         gpu: gpu_acceleration,
         gpu_warmup: gpu_warmup,
         data_node: data_node,
-        interface: interface
+        interface: interface,
+        cookie: cookie
       }) do
     unless verbose do
       Logger.configure(level: :none)
     end
 
-    connect_datanode(data_node, interface)
+    connect_datanode(data_node, interface, cookie)
 
     ErlexecBootstrap.prepare_port()
 
@@ -86,18 +87,20 @@ defmodule ShadowClient.Shadow do
     end
   end
 
-  def connect_datanode(data_node, interface) do
+  def connect_datanode(data_node, interface, cookie) do
     IO.puts("Connecting to datanode (#{data_node})")
 
     unless Node.alive?() do
       Node.start(String.to_atom("#{ShadowData.Util.unique_name("shadow_client")}@#{interface}"))
     end
 
+    if cookie !== nil, do: Node.set_cookie(String.to_atom(cookie))
+
     data_node_name = String.to_atom(data_node)
 
     r = Node.connect(data_node_name)
 
-    unless r do
+    if r !== true do
       IO.puts("Could not connect to data node...")
       exit(0)
     end

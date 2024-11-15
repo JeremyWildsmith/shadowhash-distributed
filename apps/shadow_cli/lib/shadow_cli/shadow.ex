@@ -40,16 +40,16 @@ defmodule ShadowCli.Shadow do
     IO.puts(" --verbose       : Print verbose logging")
   end
 
-  def process({:trunc_clients, %{data_node: data_node, interface: interface, limit: limit}}) do
-    connect_datanode(data_node, interface)
+  def process({:trunc_clients, %{data_node: data_node, interface: interface, limit: limit, cookie: cookie}}) do
+    connect_datanode(data_node, interface, cookie)
 
     r = ShadowData.Scheduler.truncate_clients(limit)
 
     IO.puts("Number of active clients: #{r}")
   end
 
-  def process({:status, %{data_node: data_node, interface: interface, show_all: show_all}}) do
-    connect_datanode(data_node, interface)
+  def process({:status, %{data_node: data_node, interface: interface, show_all: show_all, cookie: cookie}}) do
+    connect_datanode(data_node, interface, cookie)
 
     active = ShadowData.Scheduler.list_active()
 
@@ -88,10 +88,11 @@ defmodule ShadowCli.Shadow do
            data_node: data_node,
            workers: workers,
            interface: interface,
-           get_results: get_results
+           get_results: get_results,
+           cookie: cookie
          }}
       ) do
-    connect_datanode(data_node, interface)
+    connect_datanode(data_node, interface, cookie)
 
     unless verbose do
       Logger.configure(level: :none)
@@ -119,18 +120,20 @@ defmodule ShadowCli.Shadow do
     end
   end
 
-  defp connect_datanode(data_node, interface) do
+  defp connect_datanode(data_node, interface, cookie) do
     IO.puts("Connecting to datanode (#{data_node})")
 
     unless Node.alive?() do
       Node.start(String.to_atom("#{ShadowData.Util.unique_name("shadow_cli")}@#{interface}"))
     end
 
+    if cookie !== nil, do: Node.set_cookie(String.to_atom(cookie))
+
     data_node_name = String.to_atom(data_node)
 
     r = Node.connect(data_node_name)
 
-    unless r do
+    if r !== true do
       IO.puts("Could not connect to data node...")
       exit(0)
     end

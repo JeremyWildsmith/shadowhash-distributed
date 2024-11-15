@@ -19,7 +19,8 @@ defmodule ShadowClient.Cli do
           gpu: :boolean,
           gpu_warmup: :boolean,
           data_node: :string,
-          interface: :string
+          interface: :string,
+          cookie: :string
         ]
       )
       |> _parse_args
@@ -36,6 +37,7 @@ defmodule ShadowClient.Cli do
     |> Map.put_new(:gpu_warmup, false)
     |> Map.put_new(:data_node, "shadow_data@127.0.0.1")
     |> Map.put_new(:interface, "127.0.0.1")
+    |> Map.put_new(:cookie, nil)
   end
 
   defp _parse_args(_args) do

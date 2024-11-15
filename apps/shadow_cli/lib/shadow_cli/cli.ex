@@ -23,6 +23,7 @@ defmodule ShadowCli.Cli do
           workers: :integer,
           show_all: :boolean,
           interface: :string,
+          cookie: :string,
           get_results: :boolean
         ]
       )
@@ -51,6 +52,7 @@ defmodule ShadowCli.Cli do
       |> Map.put_new(:data_node, "shadow_data@127.0.0.1")
       |> Map.put_new(:interface, "127.0.0.1")
       |> Map.put_new(:get_results, false)
+      |> Map.put_new(:cookie, nil)
 
     {:submit, cfg}
   end
@@ -65,6 +67,7 @@ defmodule ShadowCli.Cli do
       |> Map.put_new(:data_node, "shadow_data@127.0.0.1")
       |> Map.put_new(:show_all, false)
       |> Map.put_new(:interface, "127.0.0.1")
+      |> Map.put_new(:cookie, nil)
 
     {:status, cfg}
   end
@@ -80,11 +83,14 @@ defmodule ShadowCli.Cli do
       )
       |> Map.put_new(:data_node, "shadow_data@127.0.0.1")
       |> Map.put_new(:interface, "127.0.0.1")
+      |> Map.put_new(:cookie, nil)
 
     {:trunc_clients, cfg}
   end
 
   defp _parse_args(_args) do
+    _args |> IO.inspect()
+    exit(0)
     {:help}
   end
 end
