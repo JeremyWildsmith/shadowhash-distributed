@@ -4,11 +4,17 @@ defmodule ShadowClient.Shadow do
   alias ShadowClient.Job.BruteforceClient
   alias ShadowClient.Gpu.Md5crypt
   alias ShadowClient.Gpu.Strutil
+  alias ShadowData.Util
 
   def process(:help) do
-    IO.puts("Shadow file parser and password cracker.")
+    IO.puts("Shadow file password cracker client (job processing module.)")
 
-    IO.puts("Usage is: mix run shadow_client")
+    IO.puts("Usage is: mix shadow_client")
+
+    IO.puts(" --data-node    : Name of the data node where the scheduler, job and result bank are available")
+    IO.puts(" --cookie       : Security cookie to use when connecting to the data-node.")
+    IO.puts(" --interface    : IP Address to advertise to register with as a node (IP Datanode can address you by)")
+    IO.puts(" --verbose       : Print verbose logging")
 
     IO.puts(" --gpu           : Supported for md5crypt, will execute the hash algorithm")
     IO.puts("                   on the GPU. There is initial overhead to JIT compile to CUDA")
@@ -87,27 +93,8 @@ defmodule ShadowClient.Shadow do
     end
   end
 
-  def connect_datanode(data_node, interface, cookie) do
-    IO.puts("Connecting to datanode (#{data_node})")
-
-    unless Node.alive?() do
-      Node.start(String.to_atom("#{ShadowData.Util.unique_name("shadow_client")}@#{interface}"))
-    end
-
-    if cookie !== nil, do: Node.set_cookie(String.to_atom(cookie))
-
-    data_node_name = String.to_atom(data_node)
-
-    r = Node.connect(data_node_name)
-
-    if r !== true do
-      IO.puts("Could not connect to data node...")
-      exit(0)
-    end
-
-    :global.sync()
-
-    IO.puts("Synced name registry with data node.")
+  defp connect_datanode(data_node, interface, cookie) do
+    Util.connect_datanode("shadow_client", data_node, interface, cookie)
   end
 
   defp warmup_gpu(gpu_hasher) do

@@ -89,8 +89,6 @@ defmodule ShadowCli.Cli do
   end
 
   defp _parse_args(_args) do
-    _args |> IO.inspect()
-    exit(0)
     {:help}
   end
 end

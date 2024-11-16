@@ -17,16 +17,22 @@ defmodule ShadowCli.Shadow do
   defp resolve_charset(true), do: PasswordCharset.all_mapping()
 
   def process({:help}) do
-    IO.puts("Shadow file parser and password cracker.")
+    IO.puts("Shadow hash CLI command interface.")
 
     IO.puts("Usage is one of following forms:")
-    IO.puts(" shadow_hash submit <shadow_path> [--user <username>]")
-    IO.puts(" shadow_hash status")
-    IO.puts(" shadow_hash truncate-clients <num_clients>")
+    IO.puts(" mix shadow_cli submit [<shadow_path>]")
+    IO.puts(" mix shadow_cli status")
+    IO.puts(" mix shadow_cli truncate-clients <num_clients>")
 
-    IO.puts(
-      " <shadow_path> : The path to the linux shadow file containing hashed user passwords."
-    )
+    IO.puts("\nSwitches valid for all verbs:")
+    IO.puts(" --data-node    : Name of the data node where the scheduler, job and result bank are available")
+    IO.puts(" --cookie       : Security cookie to use when connecting to the data-node.")
+    IO.puts(" --interface    : IP Address to advertise to register with as a node (IP Datanode can address you by)")
+    IO.puts(" --verbose       : Print verbose logging")
+
+    IO.puts("\nsubmit verb - submit a bruteforce job to job bank")
+    IO.puts(" <shadow_path> : Optional path to the linux shadow file containing hashed user passwords.")
+    IO.puts(" --password    : Specify a password in a valid form inline to process with/without specifying a shadow file")
 
     IO.puts(" --user <user>  : Supply a username, the passwords for which will be cracked.")
     IO.puts("                  Otherwise, attempts to crack all passwords in the shadow file.")
@@ -36,8 +42,13 @@ defmodule ShadowCli.Shadow do
       " --dictionary <dictionary>  : Supply a dictionary of passwords that are attempted initially"
     )
 
-    IO.puts(" --workers    <num_workers> : Max # of workers to allocate to submitted jobs.")
-    IO.puts(" --verbose       : Print verbose logging")
+    IO.puts(" --get-results  : Wait for the results and print them out once ready")
+
+    IO.puts("\nstatus verb - Interrogate status of jobs / results")
+    IO.puts(" --show-all     : Show all jobs (even suspended or inactive jobs.)")
+
+    IO.puts("\ntruncate-clients verb - Remove clients registered on the system")
+    IO.puts(" <num_clients>  : Maximum number of clients to keep connected to the system.")
   end
 
   def process({:trunc_clients, %{data_node: data_node, interface: interface, limit: limit, cookie: cookie}}) do
@@ -121,24 +132,7 @@ defmodule ShadowCli.Shadow do
   end
 
   defp connect_datanode(data_node, interface, cookie) do
-    IO.puts("Connecting to datanode (#{data_node})")
-
-    unless Node.alive?() do
-      Node.start(String.to_atom("#{ShadowData.Util.unique_name("shadow_cli")}@#{interface}"))
-    end
-
-    if cookie !== nil, do: Node.set_cookie(String.to_atom(cookie))
-
-    data_node_name = String.to_atom(data_node)
-
-    r = Node.connect(data_node_name)
-
-    if r !== true do
-      IO.puts("Could not connect to data node...")
-      exit(0)
-    end
-
-    :global.sync()
+    Util.connect_datanode("shadow_cli", data_node, interface, cookie)
   end
 
   defp parse_job_status(%ShadowData.Job{current_work: current_work}) do
@@ -262,7 +256,7 @@ defmodule ShadowCli.Shadow do
   end
 
   defp dictionary(nil) do
-    # IO.puts(" - No dictionary file was supplied. Skipping dictionary attack.")
+    Logger.info(" - No dictionary file was supplied. Skipping dictionary attack.")
     []
   end
 
@@ -283,26 +277,14 @@ defmodule ShadowCli.Shadow do
   end
 
   def process_password_entry(user, pwd, dictionary, charset, workers) do
-    # IO.puts("Attempting to recover password for user #{user}")
+    Logger.info("Attempting to recover password for user #{user}")
     %{hash: hash, algo: algo} = PasswordParse.parse(pwd)
-    # %{method: method} = algo
+    %{method: method} = algo
 
-    # IO.puts(" - Detected password type: #{Atom.to_string(method)}")
-    # IO.puts(" - Detected password hash: #{hash}")
+    Logger.info(" - Detected password type: #{Atom.to_string(method)}")
+    Logger.info(" - Detected password hash: #{hash}")
     name = create_name(user)
     submit(name, algo, hash, dictionary, charset, workers)
-
-    # {elapsed, password} = :timer.tc(__MODULE__, :crack, [algo, hash, dictionary, charset])
-
-    # elapsed = elapsed / 1_000_000
-
-    # case password do
-    #  nil ->
-    #    IO.puts("Password not found for user #{user} in #{elapsed} seconds")
-    #
-    #  plaintext ->
-    #    IO.puts("Password cracked for #{user} in #{elapsed} seconds. Plaintext: \"#{plaintext}\"")
-    # end
 
     name
   end
@@ -316,7 +298,6 @@ defmodule ShadowCli.Shadow do
 
   defp submit(name, algo, hash, dictionary, charset, workers) do
     Logger.info("Submitting bruteforce job to job bank.")
-    # Scheduler.submit_job(self())
 
     dictionary_work =
       chunk_dictionary_stream(%DictionaryStreamWorkUnit{stream: dictionary(dictionary)})
@@ -326,14 +307,6 @@ defmodule ShadowCli.Shadow do
         [
           %BruteforceWorkUnit{begin: 0, last: :inf, charset: charset}
         ]
-
-    # Logger.info("Starting job WorkPool...")
-    # {:ok, plaintext} = WorkPool.schedule(jobs, algo, hash, chunk_size)
-
-    # Logger.info("Dismissing bruteforce job from job server.")
-    # Scheduler.dismiss_job(self())
-
-    # plaintext
 
     job = %Job{
       current_work: work,
