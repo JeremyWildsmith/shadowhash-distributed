@@ -232,10 +232,6 @@ defmodule ShadowCli.Shadow do
       IO.puts("No user matching the search criteria was found. No attacks will be performed.")
       []
     else
-      # IO.puts(" *** Bruteforce will be performed on the following users")
-
-      # pwd |> Enum.each(fn {u, _} -> IO.puts("     - #{u}") end)
-
       for {u, p} <- pwd,
           do: process_password_entry(u, p, dictionary, charset, workers)
     end
