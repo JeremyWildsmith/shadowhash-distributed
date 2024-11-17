@@ -7,23 +7,23 @@ defmodule ShadowData.Scheduler do
   @max_concurrent 4
   @worker_timeout 90
 
-  def start_link(_) do
-    GenServer.start_link(__MODULE__, nil, name: {:global, :scheduler})
+  def start_link(chunk_size) do
+    GenServer.start_link(__MODULE__, chunk_size, name: {:global, :scheduler})
   end
 
   # Genserver impl
-  def init(_) do
+  def init([chunk_size | _]) do
     Process.send_after(self(), :poll_for_job, 0)
     Process.send_after(self(), :heartbeat, 5000)
 
-
     {:ok, %{
       work_pools: %{},
-      heartbeat: %{}
+      heartbeat: %{},
+      chunk_size: chunk_size
     }}
   end
 
-  defp start_workpool(current, %ShadowData.Job{name: name} = job) do
+  defp start_workpool(%{chunk_size: chunk_size} = current, %ShadowData.Job{name: name} = job) do
     case map_size(current) do
       y when y >= @max_concurrent ->
         current
@@ -34,11 +34,10 @@ defmodule ShadowData.Scheduler do
         {:ok, pid} =
           DynamicSupervisor.start_child(
             ShadowData.Scheduler.WorkPoolSupervisor,
-            {ShadowData.WorkPool, job}
+            {ShadowData.WorkPool, [chunk_size, job]}
           )
 
         put_in(current, [:work_pools, name], pid)
-        #Map.put_new(current, name, pid)
     end
   end
 

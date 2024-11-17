@@ -15,22 +15,25 @@ defmodule ShadowData.WorkPool do
   @work_pool_response_timeout 1000
 
   # , current_jobs, target, algo, chunk_size}) do
-  def start_link(%ShadowData.Job{
-        name: name,
-        current_work: current_work,
-        target: target,
-        algo: algo,
-        max_workers: max_workers,
-        life_time: life_time,
-        results_reported: results_reported,
-        elapsed: elapsed
-      }) do
+  def start_link([
+        chunk_size,
+        %ShadowData.Job{
+          name: name,
+          current_work: current_work,
+          target: target,
+          algo: algo,
+          max_workers: max_workers,
+          life_time: life_time,
+          results_reported: results_reported,
+          elapsed: elapsed
+        }
+      ]) do
     GenServer.start_link(__MODULE__, %{
       name: name,
       current_work: current_work,
       target: target,
       algo: algo,
-      chunk_size: 1000,
+      chunk_size: chunk_size,
       max_workers: max_workers,
       heartbeat: %{},
       task_life: %{},
@@ -78,8 +81,6 @@ defmodule ShadowData.WorkPool do
   end
 
   defp take_work(%{task_life: task_life, tasks: tasks} = current_state, sender) do
-    # Return {work_unit, next_state}
-
     task_life
     |> Enum.filter(fn {_, life} -> System.os_time(:second) - life > @task_life end)
     |> List.first()
@@ -96,8 +97,6 @@ defmodule ShadowData.WorkPool do
   end
 
   defp done_job(current_state, job_id, time_cost) do
-    # return next_state, after removing job_id from queue
-
     current_state
     |> Map.update!(:life_time, fn t -> t + time_cost end)
     |> Map.update!(:results_reported, fn t -> t + 1 end)
@@ -166,27 +165,6 @@ defmodule ShadowData.WorkPool do
         send(sender, :empty)
         {:noreply, state}
     end
-
-    # state.current_work
-    # |> WorkUnitParser.take_work(state.chunk_size)
-    # |> case do
-    #  {current, next} ->
-    #    {
-    #      :reply,
-    #      {
-    #        :work,
-    #        state.algo,
-    #        state.target,
-    #        current
-    #      },
-    #      state
-    #      |> Map.put(:current_work, next)
-    #      |> put_in([:heartbeat, sender], System.os_time(:second))
-    #    }
-    #
-    #  :empty ->
-    #    {:reply, :empty, state}
-    # end
   end
 
   def handle_cast(
@@ -276,25 +254,6 @@ defmodule ShadowData.WorkPool do
       @work_pool_response_timeout ->
         :empty
     end
-
-    # case GenServer.call(work_pool, :ready) do
-    #  {:work, algo, target, job} ->
-    #    Logger.info("Received a job. Processing the job.")
-
-    #    {elapsed, result} = :timer.tc(handler, [algo, target, job])
-
-    #    GenServer.cast(work_pool, {:done, job.id, elapsed})
-
-    #    with {:ok, plaintext} <- result do
-    #      GenServer.cast(work_pool, {:ok, target, plaintext})
-    #    end
-
-    #    Logger.info("Done assigned job.")
-    #    process(work_pool, handler)
-
-    #  :empty ->
-    #    :empty
-    # end
   end
 
   def poll_active_workers(work_pool) do
@@ -302,7 +261,6 @@ defmodule ShadowData.WorkPool do
   end
 
   def accept(work_pool, worker) do
-    # {:accept, worker})
     GenServer.call(work_pool, {:accept, worker})
   end
 end
