@@ -14,11 +14,18 @@ defmodule ShadowData.Util do
     "#{name}_#{guid}"
   end
 
+  @spec connect_datanode(any(), binary(), any(), any()) :: :ok | {:error, any()}
   def connect_datanode(name_hint, data_node, interface, cookie) do
     IO.puts("Connecting to datanode (#{data_node})")
 
     unless Node.alive?() do
-      Node.start(String.to_atom("#{ShadowData.Util.unique_name(name_hint)}@#{interface}"))
+      {r, _} = Node.start(String.to_atom("#{ShadowData.Util.unique_name(name_hint)}@#{interface}"))
+
+      if r != :ok do
+        IO.puts("Could not start local node. Maybe the Erlang Domain Service is not running?")
+        IO.puts("   Try running the command 'epmd -daemon' before running this program.")
+        exit(1)
+      end
     end
 
     if cookie !== nil, do: Node.set_cookie(String.to_atom(cookie))
