@@ -48,8 +48,8 @@ echo "Starting benchmark"
 
 mkdir -p $SCRIPT_DIRECTORY/benchmark
 
-rm $SCRIPT_DIRECTORY/benchmark/*.dat &> /dev/null
-rm $SCRIPT_DIRECTORY/benchmark/*.png &> /dev/null
+#rm $SCRIPT_DIRECTORY/benchmark/*.dat &> /dev/null
+#rm $SCRIPT_DIRECTORY/benchmark/*.png &> /dev/null
 
 
 for t in "${node_array[@]}"; do
@@ -58,8 +58,8 @@ for t in "${node_array[@]}"; do
 
     for algo in "${algo_array[@]}"; do
         echo "Benchmarking Node Performance for: $algo and $t nodes"
-        a=$(mix shadow_cli submit --password $(mkpasswd -m $algo $benchmark_password) --get-results $data_node $cookie_arg $interface_name)
-        echo $t $a >> $SCRIPT_DIRECTORY/benchmark/$algo.dat
+        #a=$(mix shadow_cli submit --password $(mkpasswd -m $algo $benchmark_password) --get-results $data_node $cookie_arg $interface_name | sed -nE 's/.*Result :: .* :: ([0-9\.]+)s*/\1/p')
+        #echo $t $a >> $SCRIPT_DIRECTORY/benchmark/$algo.dat
         echo "Done, sleeping to stabilize..."
         sleep 20
     done

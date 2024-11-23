@@ -20,7 +20,6 @@ defmodule ShadowCli.Cli do
           all_chars: :boolean,
           verbose: :boolean,
           dictionary: :string,
-          workers: :integer,
           show_all: :boolean,
           interface: :string,
           cookie: :string,
@@ -48,7 +47,6 @@ defmodule ShadowCli.Cli do
       |> Map.put_new(:verbose, false)
       |> Map.put_new(:user, "*")
       |> Map.put_new(:password, nil)
-      |> Map.put_new(:workers, :infinity)
       |> Map.put_new(:data_node, "shadow_data@127.0.0.1")
       |> Map.put_new(:interface, "127.0.0.1")
       |> Map.put_new(:get_results, false)

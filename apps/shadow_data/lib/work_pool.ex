@@ -22,7 +22,6 @@ defmodule ShadowData.WorkPool do
           current_work: current_work,
           target: target,
           algo: algo,
-          max_workers: max_workers,
           life_time: life_time,
           results_reported: results_reported,
           elapsed: elapsed
@@ -34,7 +33,6 @@ defmodule ShadowData.WorkPool do
       target: target,
       algo: algo,
       chunk_size: chunk_size,
-      max_workers: max_workers,
       heartbeat: %{},
       task_life: %{},
       tasks: %{},
@@ -89,6 +87,7 @@ defmodule ShadowData.WorkPool do
         {
           Map.get(tasks, job_id),
           put_in(current_state, [:task_life, job_id], System.os_time(:second))
+          |> put_in([:heartbeat, sender], System.os_time(:second))
         }
 
       nil ->
@@ -116,7 +115,7 @@ defmodule ShadowData.WorkPool do
     if current_work == [] do
       JobBank.drop(name)
     else
-      ShadowData.JobBank.commit(%ShadowData.JobUpdate{
+      JobBank.commit(%ShadowData.JobUpdate{
         name: name,
         current_work: Map.values(tasks) ++ current_work,
         life_time: life_time,
@@ -211,20 +210,11 @@ defmodule ShadowData.WorkPool do
     {:reply, Map.keys(state.heartbeat), state}
   end
 
-  def handle_call({:accept, worker}, _sender, state)
-      when state.max_workers == :infinity or map_size(state.heartbeat) < state.max_workers do
+  def handle_call({:accept, worker}, _sender, state) do
     {
       :reply,
       :accepted,
       put_in(state, [:heartbeat, worker], System.os_time(:second))
-    }
-  end
-
-  def handle_call({:accept, _worker}, _sender, state) do
-    {
-      :reply,
-      :full,
-      state
     }
   end
 

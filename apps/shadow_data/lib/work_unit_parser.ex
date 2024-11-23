@@ -28,8 +28,15 @@ defmodule ShadowData.WorkUnitParser do
     end
   end
 
-  defp take_unit(%DictionaryWorkUnit{}, _chunk_by) do
-    raise "Should never be taking a unit from a dictionary work unit..."
+  defp take_unit(%DictionaryWorkUnit{names: []}, _chunk_by) do
+    nil
+  end
+
+  defp take_unit(%DictionaryWorkUnit{names: names, id: id}, chunk_by) do
+    {
+      %DictionaryWorkUnit{names: names |> Enum.take(chunk_by), id: id + 1},
+      %DictionaryWorkUnit{names: names |> Enum.drop(chunk_by), id: id + 2}
+    }
   end
 
   defp take_unit(%BruteforceWorkUnit{begin: begin, last: :inf, charset: charset, id: id}, chunk_by) do

@@ -11,9 +11,9 @@ defmodule ShadowClient.Shadow do
 
     IO.puts("Usage is: mix shadow_client")
 
-    IO.puts(" --data-node    : Name of the data node where the scheduler, job and result bank are available")
-    IO.puts(" --cookie       : Security cookie to use when connecting to the data-node.")
-    IO.puts(" --interface    : IP Address to advertise to register with as a node (IP Datanode can address you by)")
+    IO.puts(" --data-node     : Name of the data node where the scheduler, job and result bank are available")
+    IO.puts(" --cookie        : Security cookie to use when connecting to the data-node.")
+    IO.puts(" --interface     : IP Address to advertise to register with as a node (IP Datanode can address you by)")
     IO.puts(" --verbose       : Print verbose logging")
 
     IO.puts(" --gpu           : Supported for md5crypt, will execute the hash algorithm")
@@ -22,13 +22,8 @@ defmodule ShadowClient.Shadow do
     IO.puts(" --gpu-warmup    : Warm-up GPU bruteforce algorithm. Useful when capturing")
     IO.puts("                   timing metrics and you don't want to include start-up overhead")
     IO.puts(" --workers <num> : Number of workers to process bruteforce requests. Defaults")
-
-    IO.puts(
-      "                   to number of available CPU cores. Be mindful of the memory constraint "
-    )
-
+    IO.puts("                   to number of available CPU cores. Be mindful of the memory constraint ")
     IO.puts("                   of GPU if using GPU acceleration")
-    IO.puts(" --verbose       : Print verbose logging")
   end
 
   def process(%{
@@ -72,15 +67,9 @@ defmodule ShadowClient.Shadow do
 
     IO.puts(" *** Using #{num_workers} worker processes ")
 
-    IO.puts("Clients have been started. To shutdown client, type exit")
-
     wait_workers(workers)
 
-    # wait_exit_command()
-
-    IO.puts("Terminating workers...")
-
-    # for {:ok, w} <- workers, do: BruteforceClient.shutdown(w)
+    IO.puts("All workers terminated.")
   end
 
   defp wait_workers([]), do: nil

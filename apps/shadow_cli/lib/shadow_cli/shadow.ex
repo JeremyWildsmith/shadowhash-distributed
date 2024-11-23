@@ -28,21 +28,17 @@ defmodule ShadowCli.Shadow do
     IO.puts(" --data-node    : Name of the data node where the scheduler, job and result bank are available")
     IO.puts(" --cookie       : Security cookie to use when connecting to the data-node.")
     IO.puts(" --interface    : IP Address to advertise to register with as a node (IP Datanode can address you by)")
-    IO.puts(" --verbose       : Print verbose logging")
+    IO.puts(" --verbose      : Print verbose logging")
 
     IO.puts("\nsubmit verb - submit a bruteforce job to job bank")
     IO.puts(" <shadow_path> : Optional path to the linux shadow file containing hashed user passwords.")
     IO.puts(" --password    : Specify a password in a valid form inline to process with/without specifying a shadow file")
-
-    IO.puts(" --user <user>  : Supply a username, the passwords for which will be cracked.")
+    IO.puts(" --dictionary <dictionary>  : Supply a dictionary of passwords that are attempted initially")
+    IO.puts(" --user <user> : Supply a username, the passwords for which will be cracked.")
     IO.puts("                  Otherwise, attempts to crack all passwords in the shadow file.")
-    IO.puts(" --all-chars    : Will also bruteforce with non-printable characters")
+    IO.puts(" --all-chars   : Will also bruteforce with non-printable characters")
 
-    IO.puts(
-      " --dictionary <dictionary>  : Supply a dictionary of passwords that are attempted initially"
-    )
-
-    IO.puts(" --get-results  : Wait for the results and print them out once ready")
+    IO.puts(" --get-results : Wait for the results and print them out once ready")
 
     IO.puts("\nstatus verb - Interrogate status of jobs / results")
     IO.puts(" --show-all     : Show all jobs (even suspended or inactive jobs.)")
@@ -97,9 +93,8 @@ defmodule ShadowCli.Shadow do
            verbose: verbose,
            password: password,
            data_node: data_node,
-           workers: workers,
            interface: interface,
-           get_results: get_results,
+           get_results: query_for_results,
            cookie: cookie
          }}
       ) do
@@ -111,9 +106,9 @@ defmodule ShadowCli.Shadow do
 
     job_names =
       load_passwords(user, shadow, password)
-      |> process_passwords(dictionary, resolve_charset(all_chars), workers)
+      |> process_passwords(dictionary, resolve_charset(all_chars))
 
-    if get_results do
+    if query_for_results do
       IO.puts("Waiting for results...")
       get_results(job_names)
     end
@@ -188,8 +183,8 @@ defmodule ShadowCli.Shadow do
     IO.puts("\n")
   end
 
-  defp print_result_short(%ResultBank.Result{name: name, elapsed: elapsed}) do
-    IO.puts("Result :: #{name} :: #{elapsed / 1_000_000}s")
+  defp print_result_short(%ResultBank.Result{result: result, elapsed: elapsed}) do
+    IO.puts("Result :: plaintext=#{result} :: #{elapsed / 1_000_000}s")
   end
 
   defp print_results(results) do
@@ -227,23 +222,23 @@ defmodule ShadowCli.Shadow do
     end
   end
 
-  def process_passwords(pwd, dictionary, charset, workers) do
+  def process_passwords(pwd, dictionary, charset) do
     if pwd == [] do
       IO.puts("No user matching the search criteria was found. No attacks will be performed.")
       []
     else
       for {u, p} <- pwd,
-          do: process_password_entry(u, p, dictionary, charset, workers)
+          do: process_password_entry(u, p, dictionary, charset)
     end
   end
 
   defp _dictionary_entry_trim_newline(line) do
     if String.ends_with?(line, "\r\n") do
-      {trimmed, _} = String.split_at(line, String.length(line) - 1)
+      {trimmed, _} = String.split_at(line, String.length(line) - 2)
       trimmed
     else
       if(String.ends_with?(line, "\n")) do
-        {trimmed, _} = String.split_at(line, String.length(line))
+        {trimmed, _} = String.split_at(line, String.length(line) - 1)
         trimmed
       else
         line
@@ -272,7 +267,7 @@ defmodule ShadowCli.Shadow do
     "crack-#{user}-#{Util.unique_name()}"
   end
 
-  def process_password_entry(user, pwd, dictionary, charset, workers) do
+  def process_password_entry(user, pwd, dictionary, charset) do
     Logger.info("Attempting to recover password for user #{user}")
     %{hash: hash, algo: algo} = PasswordParse.parse(pwd)
     %{method: method} = algo
@@ -280,23 +275,27 @@ defmodule ShadowCli.Shadow do
     Logger.info(" - Detected password type: #{Atom.to_string(method)}")
     Logger.info(" - Detected password hash: #{hash}")
     name = create_name(user)
-    submit(name, algo, hash, dictionary, charset, workers)
+    submit(name, algo, hash, dictionary, charset)
 
     name
   end
 
   defp chunk_dictionary_stream(next, current \\ []) do
-    case WorkUnitParser.take_work([next]) do
+    #{chunk, stream} = WorkUnitParser.take_work([next])
+    #{chunk, stream} = WorkUnitParser.take_work(stream)
+
+    #exit(0)
+    case WorkUnitParser.take_work(next) do
       :empty -> current
-      {chunk, stream} -> chunk_dictionary_stream(stream, [current | chunk])
+      {chunk, stream} -> chunk_dictionary_stream(stream, [chunk | current])
     end
   end
 
-  defp submit(name, algo, hash, dictionary, charset, workers) do
+  defp submit(name, algo, hash, dictionary, charset) do
     Logger.info("Submitting bruteforce job to job bank.")
 
     dictionary_work =
-      chunk_dictionary_stream(%DictionaryStreamWorkUnit{stream: dictionary(dictionary)})
+      chunk_dictionary_stream([%DictionaryStreamWorkUnit{stream: dictionary(dictionary)}])
 
     work =
       dictionary_work ++
@@ -306,11 +305,9 @@ defmodule ShadowCli.Shadow do
 
     job = %Job{
       current_work: work,
-      disabled: false,
       name: name,
       target: hash,
-      algo: algo,
-      max_workers: workers
+      algo: algo
     }
 
     IO.puts("Submitting job...")

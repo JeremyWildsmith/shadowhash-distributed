@@ -31,28 +31,11 @@ defmodule ShadowData.JobBank do
   def get_job(except) do
     Agent.get({:global, :job_bank}, fn m ->
       m
-      |> Enum.filter(fn {k, %{disabled: disabled}} -> k not in except and not disabled end)
+      |> Enum.filter(fn {k, _} -> k not in except end)
       |> Enum.map(fn {_, v} -> v end)
       |> List.first()
     end)
   end
-
-  defp set_disabled(name, is_disabled) do
-    Agent.update({:global, :job_bank}, fn map ->
-      Map.get_and_update(map, name, fn current_job ->
-        case current_job do
-          j when not is_nil(j) -> {
-            j,
-            %{j | disabled: is_disabled}
-          }
-          _ -> :pop
-        end
-      end)
-    end)
-  end
-
-  def disable(name), do: set_disabled(name, true)
-  def enable(name), do: set_disabled(name, false)
 
   def drop(name) do
     Agent.update({:global, :job_bank}, fn map ->

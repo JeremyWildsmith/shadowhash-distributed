@@ -23,8 +23,8 @@ defmodule ShadowData.Scheduler do
     }}
   end
 
-  defp start_workpool(%{chunk_size: chunk_size} = current, %ShadowData.Job{name: name} = job) do
-    case map_size(current) do
+  defp start_workpool(%{chunk_size: chunk_size, work_pools: work_pools} = current, %ShadowData.Job{name: name} = job) do
+    case map_size(work_pools) do
       y when y >= @max_concurrent ->
         current
 

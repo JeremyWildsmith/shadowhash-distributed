@@ -3,8 +3,6 @@ defmodule ShadowData.Job do
             algo: %{},
             target: "",
             current_work: [],
-            disabled: false,
-            max_workers: :infinity,
             life_time: 0,
             results_reported: 0,
             elapsed: 0

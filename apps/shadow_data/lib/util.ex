@@ -23,9 +23,9 @@ defmodule ShadowData.Util do
 
     if cookie !== nil, do: Node.set_cookie(String.to_atom(cookie))
 
-    data_node_name = String.to_atom(data_node)
-
-    r = Node.connect(data_node_name)
+    r =
+      String.to_atom(data_node)
+      |> Node.connect()
 
     if r !== true do
       IO.puts("Could not connect to data node...")
